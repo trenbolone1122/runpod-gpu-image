@@ -1,0 +1,8 @@
+#!/bin/bash
+# chrome-gpu [chrome args...]
+# Headless Google Chrome on the NVIDIA GPU through ANGLE/Vulkan. Needs an X display for some
+# code paths: run it as `xvfb-run -a chrome-gpu ...`. Check with:
+#   xvfb-run -a chrome-gpu --dump-dom chrome://gpu | grep -o "WebGL: [A-Za-z ]*"
+exec google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --ignore-gpu-blocklist \
+  --use-angle=vulkan --enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --enable-unsafe-webgpu \
+  --use-gl=angle "$@"

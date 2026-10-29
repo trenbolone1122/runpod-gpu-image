@@ -79,7 +79,7 @@ RUN curl -fsSL --retry 3 -o /tmp/ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-B
     && echo "${FFMPEG_SHA256}  /tmp/ffmpeg.tar.xz" | sha256sum -c - \
     && mkdir -p /opt/ffmpeg && tar -xJf /tmp/ffmpeg.tar.xz -C /opt/ffmpeg --strip-components=1 && rm /tmp/ffmpeg.tar.xz \
     && ln -sf /opt/ffmpeg/bin/ffmpeg /usr/local/bin/ffmpeg && ln -sf /opt/ffmpeg/bin/ffprobe /usr/local/bin/ffprobe \
-    && ffmpeg -hide_banner -version | head -1 && ffmpeg -hide_banner -encoders | grep -q h264_nvenc
+    && ffmpeg -hide_banner -version | sed -n 1p && ffmpeg -hide_banner -encoders | grep h264_nvenc >/dev/null
 
 # 6. hf CLI (huggingface_hub with hf_transfer) as a uv tool. uv ships in the base image at /bin/uv;
 #    the base points UV_CACHE_DIR at /workspace, which does not exist at build time, so use /tmp here.

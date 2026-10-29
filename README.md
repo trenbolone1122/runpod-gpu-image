@@ -74,8 +74,8 @@ Pin a dated or versioned tag in anything automated; `latest` moves.
 
 Every push to `main` and every `v*` tag runs `.github/workflows/build.yml`, which builds the
 Dockerfile on a GitHub-hosted runner and pushes to GHCR with the repository's own `GITHUB_TOKEN`.
-No secrets to configure. A build takes roughly 15 to 25 minutes (the base image alone is over
-10 GB compressed).
+No secrets to configure. A build takes about 7 to 10 minutes; the result is 11.4 GB compressed,
+of which the base image is 10.3 GB.
 
 Versions are build args at the top of the Dockerfile. To bump one, change the version and the
 matching checksum (Node: `SHASUMS256.txt` on nodejs.org; Blender: the `.md5` file next to the

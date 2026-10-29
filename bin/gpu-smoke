@@ -14,10 +14,11 @@ check "playwright-core" playwright-core --version
 check "blender" blender --version
 check "blender optix/cuda devices" blender -b --python-expr 'import bpy; p=bpy.context.preferences.addons["cycles"].preferences; [p.get_devices_for_type(t) for t in ("OPTIX","CUDA")]; d=[(x.name,x.type) for x in p.devices if x.type in ("OPTIX","CUDA")]; assert d, "no OPTIX/CUDA device"; print(d)'
 check "ffmpeg" ffmpeg -hide_banner -version
-check "nvenc encode" bash -c 'ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1:size=640x360:rate=30 -c:v h264_nvenc -y /tmp/gpu-smoke-nvenc.mp4 && echo ok && rm -f /tmp/gpu-smoke-nvenc.mp4'
+check "nvenc h264 encode" bash -c 'ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1:size=640x360:rate=30 -c:v h264_nvenc -y /tmp/gpu-smoke-nvenc.mp4 && echo ok && rm -f /tmp/gpu-smoke-nvenc.mp4'
+check "nvenc hevc encode" bash -c 'ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc=duration=1:size=640x360:rate=30 -c:v hevc_nvenc -y /tmp/gpu-smoke-hevc.mp4 && echo ok && rm -f /tmp/gpu-smoke-hevc.mp4'
 check "vulkan nvidia" bash -c 'vulkaninfo --summary 2>/dev/null | grep -m1 deviceName'
 check "chrome" google-chrome --version
-check "chrome gpu (ANGLE/Vulkan)" bash -c 'timeout 90 xvfb-run -a chrome-gpu --dump-dom chrome://gpu 2>/dev/null | grep -o "WebGL: Hardware accelerated\|WebGL: Software only\|Vulkan: Enabled\|Vulkan: Disabled" | sort -u | tr "\n" " "'
+check "webgl renderer (must be NVIDIA)" bash -c 'r=$(timeout 90 chrome-gpu --dump-dom "data:text/html,<body><script>const c=document.createElement(\"canvas\");const g=c.getContext(\"webgl2\")||c.getContext(\"webgl\");const e=g&&g.getExtension(\"WEBGL_debug_renderer_info\");document.body.textContent=g?g.getParameter(e?e.UNMASKED_RENDERER_WEBGL:g.RENDERER):\"NO WEBGL\";</script></body>" 2>/dev/null | sed "s/<[^>]*>//g" | tr -d "\n" | sed "s/^ *//"); echo "$r"; case "$r" in *NVIDIA*) exit 0;; *) exit 1;; esac'
 check "hf cli" hf --help
 check "uv" uv --version
 [ $fail -eq 0 ] && echo "GPU-SMOKE OK" || echo "GPU-SMOKE FAILED"

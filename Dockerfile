@@ -6,7 +6,7 @@
 # so nothing about pod startup changes. This file only adds the render and capture toolchain:
 #
 #   Blender (Cycles OptiX/CUDA, EEVEE under Xvfb)      /opt/blender, `blender` on PATH
-#   FFmpeg static GPL build with NVENC/NVDEC            /opt/ffmpeg,  `ffmpeg` `ffprobe` on PATH
+#   FFmpeg 8.1 static GPL build with NVENC/NVDEC        /opt/ffmpeg,  `ffmpeg` `ffprobe` on PATH
 #   Google Chrome stable + Xvfb + Vulkan/EGL runtime   `chrome-gpu` wrapper for GPU WebGL/WebGPU capture
 #   Node.js LTS + playwright-core                       /opt/node,    `node` `npm` `npx` `playwright-core` on PATH
 #   hf CLI with hf_transfer                             `hf` on PATH (model downloads)
@@ -24,9 +24,12 @@ ARG NODE_SHA256=d28a96af6c38596f6d9d97c0ee531c13d238d757742387d1928de822d959e997
 ARG PLAYWRIGHT_CORE_VERSION=1.64.1
 ARG BLENDER_VERSION=5.2.3
 ARG BLENDER_MD5=46fcccf0d7404698ecea8d205923235e
+# FFmpeg 8.1 branch, not 9.0: the 9.0 builds are compiled against NVENC API 13.1, which needs NVIDIA
+# driver 610 or newer, and Runpod hosts run 595.x (API 13.0) as of 2026-10-29. Verified on a pod:
+# 8.1.3 encodes h264_nvenc and hevc_nvenc, 9.0.2 refuses with "Required: 13.1 Found: 13.0".
 ARG FFMPEG_RELEASE=autobuild-2026-10-28-19-47
-ARG FFMPEG_ASSET=ffmpeg-n9.0.2-37-gae19868753-linux64-gpl-9.0.tar.xz
-ARG FFMPEG_SHA256=d5824906a9f3cae531f9f8b830b20fe51e7a422d8ed6fcdef3be4d5209b1b0a1
+ARG FFMPEG_ASSET=ffmpeg-n8.1.3-25-g611cec792a-linux64-gpl-8.1.tar.xz
+ARG FFMPEG_SHA256=8d02a412b0f72051bf30201a9f2c117fe557a4dc44b03c5c99fda2fbd7b00b5d
 
 LABEL org.opencontainers.image.source="https://github.com/trenbolone1122/runpod-gpu-image" \
       org.opencontainers.image.description="Runpod pod image: Blender, FFmpeg NVENC, Chrome GPU capture, Node.js, Playwright on CUDA 13.2 / PyTorch 2.13 / Ubuntu 24.04" \
@@ -62,7 +65,9 @@ RUN curl -fsSL --retry 3 -o /tmp/node.tar.xz "https://nodejs.org/dist/v${NODE_VE
     && echo "${NODE_SHA256}  /tmp/node.tar.xz" | sha256sum -c - \
     && mkdir -p /opt/node && tar -xJf /tmp/node.tar.xz -C /opt/node --strip-components=1 && rm /tmp/node.tar.xz
 ENV PATH=/opt/node/bin:${PATH}
-RUN npm install -g "playwright-core@${PLAYWRIGHT_CORE_VERSION}" && npm cache clean --force && node -v && playwright-core --version
+RUN npm install -g "playwright-core@${PLAYWRIGHT_CORE_VERSION}" && npm cache clean --force \
+    && for b in node npm npx corepack playwright-core; do if [ -e "/opt/node/bin/$b" ]; then ln -sf "/opt/node/bin/$b" "/usr/local/bin/$b"; fi; done \
+    && node -v && playwright-core --version
 
 # 4. Blender, official tarball (download.blender.org, mirror fallback), md5 from the release's .md5 list.
 RUN f="blender-${BLENDER_VERSION}-linux-x64.tar.xz"; d="Blender${BLENDER_VERSION%.*}"; \
@@ -87,12 +92,15 @@ RUN UV_CACHE_DIR=/tmp/uv-cache UV_TOOL_DIR=/opt/uv-tools UV_TOOL_BIN_DIR=/usr/lo
       uv tool install --python 3.12 "huggingface_hub[cli,hf_transfer]" \
     && rm -rf /tmp/uv-cache && hf --help >/dev/null
 
-# 7. Helpers and shell environment: chrome-gpu, gpu-smoke, and a profile.d file that puts the tools on
-#    PATH for login shells and picks the NVIDIA Vulkan ICD so Chrome never falls back to a software renderer.
+# 7. Helpers and shell environment: chrome-gpu, gpu-smoke, and a profile.d file with the GL/Vulkan
+#    vendor variables. Every binary is also reachable from /usr/local/bin, because sshd gives
+#    `ssh pod 'cmd'` a bare PATH and Ubuntu's .bashrc returns before any appended line for
+#    non-interactive shells; the source line therefore goes at the top of .bashrc, not the bottom.
 COPY bin/chrome-gpu bin/gpu-smoke /usr/local/bin/
 COPY etc/gpu-tools.sh /etc/profile.d/gpu-tools.sh
 RUN set -e; chmod 755 /usr/local/bin/chrome-gpu /usr/local/bin/gpu-smoke /etc/profile.d/gpu-tools.sh; \
-    grep -qs 'profile.d/gpu-tools.sh' /root/.bashrc || echo '. /etc/profile.d/gpu-tools.sh' >> /root/.bashrc
+    [ -f /root/.bashrc ] || touch /root/.bashrc; \
+    grep -qs 'profile.d/gpu-tools.sh' /root/.bashrc || sed -i '1i . /etc/profile.d/gpu-tools.sh' /root/.bashrc
 
 ENV __GLX_VENDOR_LIBRARY_NAME=nvidia \
     __EGL_VENDOR_LIBRARY_FILENAMES=/usr/share/glvnd/egl_vendor.d/10_nvidia.json

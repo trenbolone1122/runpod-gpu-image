@@ -1,8 +1,10 @@
 #!/bin/bash
 # chrome-gpu [chrome args...]
-# Headless Google Chrome on the NVIDIA GPU through ANGLE/Vulkan. Needs an X display for some
-# code paths: run it as `xvfb-run -a chrome-gpu ...`. Check with:
-#   xvfb-run -a chrome-gpu --dump-dom chrome://gpu | grep -o "WebGL: [A-Za-z ]*"
-exec google-chrome --headless=new --no-sandbox --disable-dev-shm-usage --ignore-gpu-blocklist \
-  --use-angle=vulkan --enable-features=Vulkan,DefaultANGLEVulkan,VulkanFromANGLE --enable-unsafe-webgpu \
-  --use-gl=angle "$@"
+# Headless Google Chrome with WebGL/WebGPU on the NVIDIA GPU through ANGLE over Vulkan. No X server
+# needed. Flag set verified on Runpod pods (renderer reads "ANGLE (NVIDIA, Vulkan 1.4 (NVIDIA RTX ...))").
+# Check:  chrome-gpu --dump-dom 'data:text/html,<script>...</script>'  or run gpu-smoke.
+# Add --disable-dev-shm-usage if Chrome crashes on a host with a small /dev/shm.
+. /etc/profile.d/gpu-tools.sh 2>/dev/null
+exec google-chrome --headless=new --no-sandbox \
+  --enable-unsafe-webgpu --enable-features=Vulkan,WebGPU --use-angle=vulkan --use-vulkan \
+  --disable-vulkan-surface --ignore-gpu-blocklist --enable-gpu-rasterization "$@"

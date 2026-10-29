@@ -19,8 +19,8 @@ One-click on Runpod: [Deploy the public template](https://console.runpod.io/depl
 |---|---|---|---|
 | Base | `runpod/pytorch:1.5.0-cu1320-torch2130-ubuntu2404` | | CUDA 13.2, PyTorch 2.13.0, Python 3.10 to 3.13 (3.12 default), uv, sshd and Jupyter via `/start.sh` |
 | Blender | 5.2.3 | `/opt/blender`, `blender` on PATH | Cycles with OptiX and CUDA; EEVEE works under `xvfb-run` |
-| FFmpeg | 9.0.2 (BtbN static GPL build, 2026-10-28) | `/opt/ffmpeg`, `ffmpeg` and `ffprobe` on PATH | h264/hevc/av1 NVENC, NVDEC, libx264, libx265 |
-| Google Chrome | stable at build time | `google-chrome`, wrapper `chrome-gpu` | headless on the GPU through ANGLE/Vulkan for WebGL and WebGPU capture |
+| FFmpeg | 8.1.3 (BtbN static GPL build, 2026-10-28) | `/opt/ffmpeg`, `ffmpeg` and `ffprobe` on PATH | h264/hevc/av1 NVENC, NVDEC, libx264, libx265. Not 9.0: its NVENC API 13.1 needs driver 610+, Runpod hosts run 595.x |
+| Google Chrome | stable at build time | `google-chrome`, wrapper `chrome-gpu` | headless on the GPU through ANGLE/Vulkan for WebGL and WebGPU capture; no X server needed |
 | Node.js | 26.13.0 LTS | `/opt/node`, `node` `npm` `npx` on PATH | |
 | playwright-core | 1.64.1 | `playwright-core` on PATH | drives the system Chrome (`channel: "chrome"`); no bundled browsers |
 | hf CLI | latest huggingface_hub with hf_transfer | `hf` on PATH | fast model downloads |
@@ -56,7 +56,7 @@ usual Runpod template behaviour are unchanged. Once SSH is up:
 gpu-smoke                                                 # everything PASS?
 blender -b scene.blend -E CYCLES -o //frames/f_ -f 1 -- --cycles-device OPTIX
 ffmpeg -i in.mov -c:v h264_nvenc -preset p5 -cq 19 -c:a aac out.mp4
-xvfb-run -a chrome-gpu --screenshot=/tmp/s.png --window-size=1920,1080 https://example.com
+chrome-gpu --screenshot=/tmp/s.png --window-size=1920,1080 https://example.com
 ```
 
 Container disk: 50 GB is a comfortable default for render scratch (frames, encodes, Chrome

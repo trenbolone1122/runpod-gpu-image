@@ -9,6 +9,10 @@ of downloads.
 ghcr.io/trenbolone1122/runpod-gpu-image:latest
 ```
 
+One-click on Runpod: [Deploy the public template](https://console.runpod.io/deploy?template=5v7v7rzo6n)
+("GPU Render Workstation (Blender, FFmpeg NVENC, Chrome, Node)", pinned to a versioned tag,
+50 GB container disk, 50 GB volume disk at `/workspace`, SSH and JupyterLab, CUDA 13.2+ hosts).
+
 ## What is inside
 
 | Component | Version | Where | Notes |
